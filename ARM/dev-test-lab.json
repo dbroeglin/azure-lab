@@ -1,0 +1,217 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "labName": {
+        "type": "string",
+        "metadata": {
+          "description": "The name of the new lab instance to be created."
+        }
+      },
+
+
+      "timeZoneId": {
+        "type": "string",
+        "defaultValue": "UTC",
+        "metadata": {
+          "description": "The timezone of the lab."
+        }
+      },      
+      "labVirtualNetworkName": {
+        "type": "string",
+        "metadata": {
+          "description": "The name of the new lab virtual network instance to be created with the new lab instance being created."
+        }
+      },
+      "existingVirtualNetworkId": {
+        "type": "string",
+        "metadata": {
+          "description": "The resource ID pointing to an existing (compute) virtual network to be referenced by the new lab virtual network instance being created."
+        }
+      },
+      "existingSubnetName": {
+        "type": "string",
+        "defaultValue": "default",
+        "metadata": {
+          "description": "The name of an existing (compute) subnet instance to be configured for Lab VM creation."
+        }
+      },
+      "maxAllowedVmsPerUser": {
+        "type": "int",
+        "minValue": 0,
+        "defaultValue": 2,
+        "metadata": {
+          "description": "Set 'max VM allowed per user' policy: The maximum number of VMs allowed per user."
+        }
+      },
+      "maxAllowedVmsPerLab": {
+        "type": "int",
+        "minValue": 0,
+        "defaultValue": 2,
+        "metadata": {
+          "description": "Set 'Total VMs allowed in Lab' policy: The maximum number of VMs allowed per lab."
+        }
+      },
+
+      "vmName": {
+        "type": "string",
+        "metadata": {
+          "description": "The name of the VM created in the Lab."
+        }
+      },
+      "userName": {
+        "type": "string",
+        "metadata": {
+          "description": "VM Username"
+        }
+      },
+      "password": {
+        "type": "string",
+        "metadata": {
+          "description": "VM Password"
+        }
+      },
+      "size": {
+        "type": "string",
+        "defaultValue": "Standard_A1"
+      },
+      "labVMShutdownTime": {
+        "type": "string",
+        "defaultValue": "20:00"
+      }                 
+    },
+    "variables": {
+
+      "newLabId": "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]",
+      
+      "existingSubnetId": "[concat(parameters('existingVirtualNetworkId'), '/subnets/', parameters('existingSubnetName'))]",
+
+      "vmNameInLab": "[concat(parameters('labName'), '/', parameters('vmName'))]",
+      "labVirtualNetworkId": "[resourceId('Microsoft.DevTestLab/labs/virtualnetworks', parameters('labName'), parameters('labVirtualNetworkName'))]",
+      
+    },
+    "resources": [
+      {
+        "apiVersion": "2017-04-26-preview",
+        "type": "Microsoft.DevTestLab/labs",
+        "name": "[parameters('labName')]",
+        "location": "[resourceGroup().location]",
+        "resources": [
+          {
+            "apiVersion": "2017-04-26-preview",
+            "name": "[parameters('labVirtualNetworkName')]",
+            "type": "virtualNetworks",
+            "dependsOn": [
+              "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+            ],
+            "properties": {
+              "description": "Existing Compute virtual network associated as part of the lab creation process.",
+              "externalProviderResourceId": "[parameters('existingVirtualNetworkId')]",
+              "subnetOverrides": [
+                {
+                  "name": "[parameters('existingSubnetName')]",
+                  "resourceId": "[variables('existingSubnetId')]",
+                  "useInVmCreationPermission": "Allow",
+                  "usePublicIpAddressPermission": "Deny"
+                }
+              ]
+            }
+          },
+          {
+            "apiVersion": "2017-04-26-preview",
+            "name": "LabVmsShutdown",
+            "type": "schedules",
+            "dependsOn": [
+              "[variables('newLabId')]"
+            ],
+            "properties": {
+              "status": "Enabled",
+              "timeZoneId": "[parameters('timeZoneId')]",
+              "taskType": "LabVmsShutdownTask",
+              "dailyRecurrence": {
+                  "time": "[replace(parameters('labVmShutDownTime'),':','')]"
+              }
+            }
+          },
+          {
+            "apiVersion": "2017-04-26-preview",
+            "name": "default/MaxVmsAllowedPerUser",
+            "type": "policysets/policies",
+            "dependsOn": [
+              "[variables('newLabId')]"
+            ],
+            "properties": {
+              "description": "",
+              "factName": "UserOwnedLabVmCount",
+              "threshold": "[string(parameters('maxAllowedVmsPerUser'))]",
+              "evaluatorType": "MaxValuePolicy",
+              "status": "enabled"
+            }
+          },
+          {
+            "apiVersion": "2017-04-26-preview",
+            "name": "default/MaxVmsAllowedPerLab",
+            "type": "policysets/policies",
+            "dependsOn": [
+              "[variables('newLabId')]"
+            ],
+            "properties": {
+              "description": "",
+              "factName": "LabVmCount",
+              "threshold": "[string(parameters('maxAllowedVmsPerLab'))]",
+              "evaluatorType": "MaxValuePolicy",
+              "status": "enabled"
+            }
+          }            
+        ]
+      },
+      {
+        "apiVersion": "2017-04-26-preview",
+        "type": "Microsoft.DevTestLab/labs/virtualmachines",
+        "name": "[variables('vmNameInLab')]",
+        "location": "[resourceGroup().location]",
+        "properties": {
+          "labVirtualNetworkId": "[variables('labVirtualNetworkId')]",
+          "notes": "[smalldisk] Windows Server 2016 Datacenter",
+          "galleryImageReference": {
+            "offer": "WindowsServer",
+            "publisher": "MicrosoftWindowsServer",
+            "sku": "2016-Datacenter-smalldisk",
+            "osType": "Windows",
+            "version": "latest"
+          },
+          "size": "[parameters('size')]",
+          "userName": "[parameters('userName')]",
+          "password": "[parameters('password')]",
+          "isAuthenticationWithSshKey": false,
+          "artifacts": [
+            {
+              "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', parameters('labName'), 'public repo', 'windows-chrome')]"
+            },
+            {
+              "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', parameters('labName'), 'public repo', 'windows-git')]"
+            },
+            {
+              "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', parameters('labName'), 'public repo', 'windows-vscode')]"
+            },
+            {
+              "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', parameters('labName'), 'public repo', 'windows-sysinternals')]"
+            },
+            {
+              "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', parameters('labName'), 'public repo', 'windows-azurepowershell')]"
+            }
+          ],
+          "labSubnetName": "[parameters('existingSubnetName')]",
+          "disallowPublicIpAddress": true,
+          "storageType": "Standard",
+          "allowClaim": false
+        }
+      }         
+    ],
+    "outputs": {
+      "labId": {
+        "type": "string",
+        "value": "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+      }
+    }
+  }
