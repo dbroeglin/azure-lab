@@ -20,7 +20,11 @@ Param(
 
     [Parameter(Mandatory)]
     [String]
-    $ExistingVnetName
+    $ExistingVnetName,
+
+    [Parameter(Mandatory)]
+    [String]
+    $ExistingSubnetName
 )
 
 $ErrorActionPreference = "stop"
@@ -52,7 +56,7 @@ $TemplateParameterObject = @{
     labName                   = "PowerShellLab$Label"
     labVirtualNetworkName     = "lab$Label-vnet"
     existingVirtualNetworkId  = $vnetId.ToString()
-    existingSubnetName        = "default"
+    existingSubnetName        = $ExistingSubnetName
     timezoneId                = "W. Europe Standard Time"
 
     vmName                    = $vmName

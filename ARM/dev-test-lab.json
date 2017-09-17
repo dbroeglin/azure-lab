@@ -236,7 +236,7 @@
           "scope": "[variables('roleScope')]"
         },
         "dependsOn": [
-          "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          "[variables('newLabId')]"
         ]
       }              
     ],
