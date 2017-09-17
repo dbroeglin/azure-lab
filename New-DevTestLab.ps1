@@ -31,13 +31,13 @@ New-AzureRmResourceGroup -Name $ResourceGroupName -Location $ResourceGroupLocati
 
 
 if ($UserMail) {
-    $principalId = Get-AzureRmADUser -Mail $UserEmail | Select-Object -ExpandProperty ID 
+    $principalId = Get-AzureRmADUser -Mail $UserMail | Select-Object -ExpandProperty ID 
 } else {
     $principalId = Get-AzureRmADUser -SearchString $UserName | Select-Object -ExpandProperty ID      
 }
 if ($null -eq $principalId) {
     if ($UserMail) {
-        throw "Unable to find user with email '$UserEmail' in Azure AD"        
+        throw "Unable to find user with email '$UserMail' in Azure AD"        
     } else {
         throw "Unable to find user with search string '$UserName' in Azure AD"                
     }
