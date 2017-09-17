@@ -78,7 +78,20 @@
       "labVMShutdownTime": {
         "type": "string",
         "defaultValue": "20:00"
-      }                 
+      },
+      
+      "principalId": {
+        "type": "string",
+        "metadata": {
+          "description": "The objectId of the user, group, or service principal for the role."
+        }
+      },
+      "roleAssignmentGuid": {
+        "type": "string",
+        "metadata": {
+          "description": "Guid to use as the name for the role assignment."
+        }
+      }      
     },
     "variables": {
 
@@ -88,7 +101,10 @@
 
       "vmNameInLab": "[concat(parameters('labName'), '/', parameters('vmName'))]",
       "labVirtualNetworkId": "[resourceId('Microsoft.DevTestLab/labs/virtualnetworks', parameters('labName'), parameters('labVirtualNetworkName'))]",
-      
+
+      "devTestLabUserRoleId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/76283e04-6283-4c54-8f91-bcf1374a3c64')]",
+      "fullDevTestLabUserRoleName": "[concat(parameters('labName'), '/Microsoft.Authorization/', parameters('roleAssignmentGuid'))]",
+      "roleScope": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.DevTestLab/labs/', parameters('labName'))]"      
     },
     "resources": [
       {
@@ -170,6 +186,9 @@
         "type": "Microsoft.DevTestLab/labs/virtualmachines",
         "name": "[variables('vmNameInLab')]",
         "location": "[resourceGroup().location]",
+        "dependsOn": [
+          "[variables('newLabId')]"
+        ],
         "properties": {
           "labVirtualNetworkId": "[variables('labVirtualNetworkId')]",
           "notes": "[smalldisk] Windows Server 2016 Datacenter",
@@ -206,7 +225,20 @@
           "storageType": "Standard",
           "allowClaim": false
         }
-      }         
+      },
+      {
+        "apiVersion": "2016-07-01",
+        "type": "Microsoft.DevTestLab/labs/providers/roleAssignments",
+        "name": "[variables('fullDevTestLabUserRoleName')]",
+        "properties": {
+          "roleDefinitionId": "[variables('devTestLabUserRoleId')]",
+          "principalId": "[parameters('principalId')]",
+          "scope": "[variables('roleScope')]"
+        },
+        "dependsOn": [
+          "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+        ]
+      }              
     ],
     "outputs": {
       "labId": {
