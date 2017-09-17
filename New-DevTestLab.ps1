@@ -51,7 +51,7 @@ if ($null -eq $vnetId) {
 $TemplateParameterObject = @{
     labName                   = "PowerShellLab$Label"
     labVirtualNetworkName     = "lab$Label-vnet"
-    existingVirtualNetworkId  = $vnetId
+    existingVirtualNetworkId  = $vnetId.ToString()
     existingSubnetName        = "default"
     timezoneId                = "W. Europe Standard Time"
 
