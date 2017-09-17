@@ -227,7 +227,7 @@
         }
       },
       {
-        "apiVersion": "2016-07-01",
+        "apiVersion": "2017-04-26-preview",
         "type": "Microsoft.DevTestLab/labs/providers/roleAssignments",
         "name": "[variables('fullDevTestLabUserRoleName')]",
         "properties": {
