@@ -2,7 +2,7 @@
 
 ## Usage
 
-.\New-DevTestLab.ps1 -ResourceGroupName LAB-PS01-RG -Label 01 -ExistingVNetName common-vnet
+.\New-DevTestLab.ps1 -ResourceGroupName LAB-PS01-RG -Label 01 -ExistingVNetName common-vnet -ExistingSubnetName default
 
 ## Sources
 
